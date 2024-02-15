@@ -1,3 +1,3 @@
 pub trait Parser{
-    fn parse_struct();
+    fn parse_struct(&self);
 }
