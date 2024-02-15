@@ -9,11 +9,12 @@ pub fn parser_derive(input: TokenStream) -> TokenStream {
     impl_parser(&ast)
 }
 
+// the actual macro
 fn impl_parser(ast: &syn::DeriveInput) -> TokenStream {
     //get struct name
     let struct_name = &ast.ident;
 
-    // get the data
+    // get the fields
     let fields = if let syn::Data::Struct(syn::DataStruct {
         fields: syn::Fields::Named(ref fields),
         ..
@@ -24,33 +25,40 @@ fn impl_parser(ast: &syn::DeriveInput) -> TokenStream {
         panic!("Only supporting structs")
     };
 
-    // parse and add to vectors
+    // create vectors for keys and values
     let mut keys = Vec::new();
-    let mut idents = Vec::new();
+    let mut values = Vec::new();
+
+    // parse and add to appropriate vectors
     for field in fields.named.iter() {
         let field_name: &syn::Ident = field.ident.as_ref().unwrap();
         let name: String = field_name.to_string();
         let literal_key_str = syn::LitStr::new(&name, field.span());
         keys.push(quote! { #literal_key_str });
-        idents.push(&field.ident);
+        values.push(&field.ident);
     }
 
-    // print out the vectors
+    // print
     let expanded = quote! {
         impl Parser for #struct_name {
             fn parse_struct(&self) {
+                // open json
                 println!("\"{}\": {{", stringify!(#struct_name));
-
+                
+                // body, cool looping style
                 #(
                     println!(
                         "\t\"{key}\": \"{value}\",",
                         key = #keys,
-                        value = self.#idents,
+                        value = self.#values,
                     );
                 )*
+                
+                // close json
                 println!("}}");
             }
         }
     };
+
     expanded.into()
 }
